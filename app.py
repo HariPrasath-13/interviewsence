@@ -31,6 +31,7 @@ import numpy as np
 import cv2
 from datetime import datetime
 from flask import Flask, request, jsonify, render_template, send_file
+from flask_cors import CORS
 
 # Import project modules
 import database as db
@@ -38,6 +39,7 @@ from emotion_detector import EmotionDetector
 from report_generator import ReportGenerator
 
 app = Flask(__name__)
+CORS(app)
 
 # Constants
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -65,6 +67,7 @@ def history_page():
     return render_template('history.html')
 
 @app.route('/start', methods=['POST'])
+@app.route('/api/start', methods=['POST'])
 def start_session():
     try:
         session_id = str(uuid.uuid4())
@@ -81,6 +84,7 @@ def start_session():
         }), 500
 
 @app.route('/process_frame', methods=['POST'])
+@app.route('/api/process_frame', methods=['POST'])
 def process_frame():
     try:
         data = request.get_json()
@@ -127,6 +131,7 @@ def process_frame():
         }), 500
 
 @app.route('/stop', methods=['POST'])
+@app.route('/api/stop', methods=['POST'])
 def stop_session():
     try:
         data = request.get_json()
@@ -230,6 +235,7 @@ def stop_session():
         }), 500
 
 @app.route('/reset', methods=['POST'])
+@app.route('/api/reset', methods=['POST'])
 def reset_session():
     try:
         data = request.get_json()
@@ -255,6 +261,7 @@ def reset_session():
         }), 500
 
 @app.route('/download_report')
+@app.route('/api/download_report')
 def download_report():
     try:
         session_id = request.args.get('session_id')
@@ -285,6 +292,8 @@ def download_report():
         return f"Internal Server Error generating report: {str(e)}", 500
 
 @app.route('/history_data', methods=['GET'])
+@app.route('/api/history_data', methods=['GET'])
+@app.route('/api/history', methods=['GET'])
 def get_history_data():
     try:
         sessions = db.get_all_sessions(DB_PATH)
@@ -299,6 +308,7 @@ def get_history_data():
         }), 500
 
 @app.route('/api/session_details/<session_id>', methods=['GET'])
+@app.route('/api/sessions/<session_id>', methods=['GET'])
 def get_session_detail_data(session_id):
     try:
         session = db.get_session(DB_PATH, session_id)
@@ -318,6 +328,8 @@ def get_session_detail_data(session_id):
 
 
 @app.route('/delete_session/<session_id>', methods=['POST', 'DELETE'])
+@app.route('/api/delete_session/<session_id>', methods=['POST', 'DELETE'])
+@app.route('/api/sessions/<session_id>', methods=['DELETE'])
 def delete_saved_session(session_id):
     try:
         db.delete_session(DB_PATH, session_id)
@@ -332,6 +344,43 @@ def delete_saved_session(session_id):
         return jsonify({
             "status": "error",
             "message": f"Failed to delete session: {str(e)}"
+        }), 500
+
+@app.route('/api/health', methods=['GET'])
+def health_check():
+    return jsonify({
+        "status": "healthy",
+        "timestamp": datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+        "detector_ready": detector is not None
+    })
+
+@app.route('/api/analyze_image', methods=['POST'])
+def analyze_image():
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({"status": "error", "message": "No JSON payload provided."}), 400
+        
+        frame_b64 = data.get('image')
+        if not frame_b64:
+            return jsonify({"status": "error", "message": "Missing 'image' base64 content."}), 400
+            
+        # Decode base64 image to CV2 matrix
+        frame = detector.base64_to_cv2(frame_b64)
+        if frame is None:
+            return jsonify({"status": "error", "message": "Failed to decode image frame."}), 400
+            
+        # Run emotion detection
+        analysis_result = detector.analyze_frame(frame)
+        
+        return jsonify({
+            "status": "success",
+            "analysis": analysis_result
+        })
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "message": f"Error in image analysis: {str(e)}"
         }), 500
 
 if __name__ == '__main__':
