@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>InterviewSense — Session History</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="dark-theme">
+    <div class="app-container">
+        
+        <!-- SIDEBAR NAVIGATION -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <i class="fa-solid fa-brain-circuit logo-icon"></i>
+                <span class="logo-text">Interview<span>Sense</span></span>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="/" class="nav-item" id="nav-dashboard">
+                    <i class="fa-solid fa-chart-line"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="/history" class="nav-item active" id="nav-history">
+                    <i class="fa-solid fa-history"></i>
+                    <span>History Logs</span>
+                </a>
+            </nav>
+            <div class="sidebar-footer">
+                <span class="version-tag">Production V1.1.0</span>
+            </div>
+        </aside>
+
+        <!-- MAIN DASHBOARD CONTENT AREA -->
+        <main class="main-content">
+            <header class="app-header">
+                <div class="header-left">
+                    <h1>Mock Practice Archive</h1>
+                    <p class="subtitle">Review historical logs, download PDF summaries, and track your facial expressions progression.</p>
+                </div>
+            </header>
+
+            <!-- HISTORY LIST CONTAINER -->
+            <div class="dashboard-grid full-grid">
+                <div class="dashboard-card glass-card full-width">
+                    <div class="card-header border-bottom">
+                        <h2>Logged Practice Attempts</h2>
+                        <button id="btn-refresh-history" class="btn btn-secondary btn-sm">
+                            <i class="fa-solid fa-arrows-rotate"></i> Refresh Logs
+                        </button>
+                    </div>
+
+                    <div class="history-table-container">
+                        <table class="history-table" id="table-history-logs">
+                            <thead>
+                                <tr>
+                                    <th>Practice Date</th>
+                                    <th>Duration</th>
+                                    <th>Dominant Emotion</th>
+                                    <th>Avg Confidence</th>
+                                    <th>Pos / Neu / Neg</th>
+                                    <th class="text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="history-tbody">
+                                <!-- Loaded dynamically via fetch request -->
+                                <tr>
+                                    <td colspan="6" class="table-placeholder">
+                                        <div class="spinner-inline"></div>
+                                        <p>Reading databases records...</p>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- SELECTIVE INSPECTION DRAWER PANEL -->
+                <div class="dashboard-card glass-card full-width" id="history-inspection-card" style="display: none;">
+                    <div class="card-header border-bottom">
+                        <h2>Practice Log Insights: <span id="inspect-date" class="highlight-text">Date</span></h2>
+                        <div class="header-btn-tray">
+                            <a id="inspect-btn-download" href="#" class="btn btn-primary btn-sm">
+                                <i class="fa-solid fa-file-pdf"></i> PDF Report
+                            </a>
+                            <button id="inspect-btn-close" class="btn btn-secondary btn-sm">
+                                <i class="fa-solid fa-compress"></i> Minimize
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="inspect-layout-wrapper">
+                        <!-- Quick Stats Block -->
+                        <div class="metrics-grid">
+                            <div class="stat-card flex-between">
+                                <div class="col-left">
+                                    <span class="label">Dominant</span>
+                                    <span class="value capitalize text-gradient" id="inspect-dominant">Neutral</span>
+                                </div>
+                                <i class="fa-solid fa-smile-wink stat-icon text-indigo"></i>
+                            </div>
+                            <div class="stat-card flex-between">
+                                <div class="col-left">
+                                    <span class="label">Duration</span>
+                                    <span class="value" id="inspect-duration">04:12</span>
+                                </div>
+                                <i class="fa-solid fa-hourglass-half stat-icon text-teal"></i>
+                            </div>
+                            <div class="stat-card flex-between">
+                                <div class="col-left">
+                                    <span class="label">Avg Confidence</span>
+                                    <span class="value" id="inspect-confidence">84.2%</span>
+                                </div>
+                                <i class="fa-solid fa-shield-circle-check stat-icon text-green"></i>
+                            </div>
+                        </div>
+
+                        <!-- Recommendations text -->
+                        <div class="coaching-feedback-block">
+                            <h3>Facial Presentation Coaching Advice</h3>
+                            <p id="inspect-coaching-advice" class="italics-description">Loading recommendations...</p>
+                        </div>
+
+                        <!-- Mini Charts row -->
+                        <div class="inspect-charts-columns">
+                            <div class="mini-chart-card">
+                                <h4>Sampled Timeline Progression</h4>
+                                <div class="chart-content">
+                                    <canvas id="inspectTimelineChart"></canvas>
+                                </div>
+                            </div>
+                            <div class="mini-chart-card">
+                                <h4>Expression Makeup</h4>
+                                <div class="chart-content flex-center">
+                                    <canvas id="inspectDistributionChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- GLOBAL LOADING MODAL overlay -->
+    <div id="global-spinner" class="loading-overlay" style="display: none;">
+        <div class="spinner-box">
+            <div class="spinner"></div>
+            <p id="spinner-message">Talking to server database...</p>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='charts.js') }}"></script>
+    <script>
+        // Inline execution context specific for history loading
+        let inspectLineChartInstance = null;
+        let inspectPieChartInstance = null;
+        let originalHistoryData = [];
+
+        document.getElementById('nav-dashboard').addEventListener('click', function(e) {
+            window.location.href = "/";
+        });
+
+        // Fetch history lists on ready
+        document.addEventListener("DOMContentLoaded", () => {
+            loadHistoryTable();
+
+            document.getElementById('btn-refresh-history').addEventListener('click', loadHistoryTable);
+            document.getElementById('inspect-btn-close').addEventListener('click', () => {
+                document.getElementById('history-inspection-card').style.display = 'none';
+            });
+        });
+
+        function showSpinner(msg) {
+            document.getElementById('spinner-message').textContent = msg;
+            document.getElementById('global-spinner').style.display = 'flex';
+        }
+
+        function hideSpinner() {
+            document.getElementById('global-spinner').style.display = 'none';
+        }
+
+        function loadHistoryTable() {
+            const tbody = document.getElementById('history-tbody');
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="6" class="table-placeholder">
+                        <div class="spinner-inline"></div>
+                        <p>Syncing session records...</p>
+                    </td>
+                </tr>
+            `;
+
+            fetch('/history_data')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        originalHistoryData = data.sessions;
+                        renderHistoryRows(data.sessions);
+                    } else {
+                        tbody.innerHTML = `
+                            <tr>
+                                <td colspan="6" class="table-placeholder error">
+                                    <i class="fa-solid fa-circle-exclamation"></i>
+                                    <p>Error listing history data: ${data.message}</p>
+                                </td>
+                            </tr>
+                        `;
+                    }
+                })
+                .catch(err => {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="6" class="table-placeholder error">
+                                <i class="fa-solid fa-circle-exclamation"></i>
+                                <p>Network request failed: ${err.message}</p>
+                            </td>
+                        </tr>
+                    `;
+                });
+        }
+
+        function formatDuration(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        function renderHistoryRows(sessions) {
+            const tbody = document.getElementById('history-tbody');
+            if (!sessions || sessions.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="table-placeholder empty">
+                            <i class="fa-solid fa-folder-open"></i>
+                            <p>No practice logs saved yet. Go back to Dashboard and start an interview session!</p>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = '';
+            sessions.forEach(sess => {
+                const tr = document.createElement('tr');
+                tr.className = "clickable-row";
+                tr.setAttribute('data-id', sess.session_id);
+                
+                // Clicking the row initiates selective inspection
+                tr.addEventListener('click', (e) => {
+                    // Prevent trigger if clicking on action buttons directly
+                    if (e.target.closest('.action-tray') || e.target.closest('a') || e.target.closest('button')) {
+                        return;
+                    }
+                    inspectSession(sess.session_id);
+                });
+
+                const formattedDate = sess.timestamp;
+                const formattedDuration = formatDuration(sess.duration);
+                const avgConf = `${parseFloat(sess.average_confidence).toFixed(1)}%`;
+                const statsMakeup = `
+                    <div class="metrics-pill-wrap">
+                        <span class="pill pill-pos" title="Positive"><i class="fa-solid fa-plus"></i> ${sess.positive_pct.toFixed(0)}%</span>
+                        <span class="pill pill-neu" title="Neutral"><i class="fa-solid fa-minus"></i> ${sess.neutral_pct.toFixed(0)}%</span>
+                        <span class="pill pill-neg" title="Negative"><i class="fa-solid fa-times"></i> ${sess.negative_pct.toFixed(0)}%</span>
+                    </div>
+                `;
+
+                tr.innerHTML = `
+                    <td><b>${formattedDate}</b></td>
+                    <td>${formattedDuration}</td>
+                    <td><span class="badge-emotion ${sess.dominant_emotion}">${sess.dominant_emotion.toUpperCase()}</span></td>
+                    <td>${avgConf}</td>
+                    <td>${statsMakeup}</td>
+                    <td class="text-right">
+                        <div class="action-tray">
+                            <a href="/download_report?session_id=${sess.session_id}" class="btn-icon text-indigo" title="Download Report">
+                                <i class="fa-solid fa-file-pdf"></i>
+                            </a>
+                            <button onclick="deleteSessionRow('${sess.session_id}')" class="btn-icon text-danger" title="Delete Logs">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function inspectSession(sessionId) {
+            const sess = originalHistoryData.find(s => s.session_id === sessionId);
+            if (!sess) return;
+
+            document.getElementById('inspect-date').textContent = sess.timestamp;
+            document.getElementById('inspect-dominant').textContent = sess.dominant_emotion;
+            document.getElementById('inspect-duration').textContent = formatDuration(sess.duration);
+            document.getElementById('inspect-confidence').textContent = `${parseFloat(sess.average_confidence).toFixed(1)}%`;
+            document.getElementById('inspect-coaching-advice').textContent = sess.recommendations;
+            document.getElementById('inspect-btn-download').href = `/download_report?session_id=${sess.session_id}`;
+
+            const detailPanel = document.getElementById('history-inspection-card');
+            detailPanel.style.display = 'block';
+            detailPanel.scrollIntoView({ behavior: 'smooth' });
+
+            // Now we trigger a sub-fetch to get specific timeline logs to draw charts
+            showSpinner("Loading session details from database...");
+            fetch(`/api/session_details/${sessionId}`)
+                .then(res => res.json())
+                .then(data => {
+                    hideSpinner();
+                    if (data.status === 'success') {
+                        // Render inspection charts in charts.js
+                        if (typeof renderInspectionCharts === "function") {
+                            renderInspectionCharts(
+                                'inspectTimelineChart',
+                                'inspectDistributionChart',
+                                data.details,
+                                data.session
+                            );
+                        }
+                    } else {
+                        alert("Error loading details: " + data.message);
+                    }
+                })
+                .catch(err => {
+                    hideSpinner();
+                    alert("Network error: " + err.message);
+                });
+
+        }
+
+        function deleteSessionRow(sessionId) {
+            if (!confirm("Are you sure you want to permanently delete this practice attempt log? All PDF reports and emotion timestamps will be lost.")) {
+                return;
+            }
+
+            showSpinner("Deleting session...");
+            fetch(`/delete_session/${sessionId}`, {
+                method: 'POST'
+            })
+            .then(res => res.json())
+            .then(data => {
+                hideSpinner();
+                if (data.status === 'success') {
+                    // Remove inspection panel if we deleted the currently selected session
+                    const detailPanel = document.getElementById('history-inspection-card');
+                    detailPanel.style.display = 'none';
+                    loadHistoryTable();
+                } else {
+                    alert("Delete failed: " + data.message);
+                }
+            })
+            .catch(err => {
+                hideSpinner();
+                alert("Network error: " + err.message);
+            });
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>InterviewSense — AI Powered Mock Interview Assistant</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Custom Style Sheet -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="dark-theme">
+    <div class="app-container">
+        
+        <!-- SIDEBAR NAVIGATION -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <i class="fa-solid fa-brain-circuit logo-icon"></i>
+                <span class="logo-text">Interview<span>Sense</span></span>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="/" class="nav-item active" id="nav-dashboard">
+                    <i class="fa-solid fa-chart-line"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="/history" class="nav-item" id="nav-history">
+                    <i class="fa-solid fa-history"></i>
+                    <span>History Logs</span>
+                </a>
+            </nav>
+            <div class="sidebar-footer">
+                <span class="version-tag">Production V1.1.0</span>
+            </div>
+        </aside>
+
+        <!-- MAIN DASHBOARD CONTENT AREA -->
+        <main class="main-content">
+            <header class="app-header">
+                <div class="header-left">
+                    <h1>Real-time Interview Insights</h1>
+                    <p class="subtitle">Elevating self-reflection and facial confidence during mock practice sessions.</p>
+                </div>
+                <div class="header-right">
+                    <div id="connection-indicator" class="connection-status connected">
+                        <span class="dot"></span>
+                        <span class="status-text">System Ready</span>
+                    </div>
+                </div>
+            </header>
+
+            <div class="dashboard-grid">
+                
+                <!-- WEBCAM AND CONTROLS CARD -->
+                <div class="dashboard-card card-cam glass-card">
+                    <div class="card-header">
+                        <h2>Webcam Feed</h2>
+                        <div class="badge-status" id="face-indicator">
+                            <span class="status-dot warning"></span>
+                            <span class="badge-txt">NO FACE</span>
+                        </div>
+                    </div>
+                    
+                    <div class="video-wrapper">
+                        <video id="webcam" autoplay playsinline muted></video>
+                        <canvas id="canvas-overlay"></canvas>
+                        
+                        <div class="video-placeholder" id="video-placeholder-element">
+                            <i class="fa-solid fa-video-slash"></i>
+                            <p>Camera source inactive. Select START below.</p>
+                        </div>
+                    </div>
+
+                    <div class="control-actions">
+                        <button id="btn-start" class="btn btn-primary">
+                            <i class="fa-solid fa-play"></i> Start Mock
+                        </button>
+                        <button id="btn-stop" class="btn btn-danger" disabled>
+                            <i class="fa-solid fa-stop"></i> Stop & Save
+                        </button>
+                        <button id="btn-reset" class="btn btn-secondary" disabled>
+                            <i class="fa-solid fa-rotate-left"></i> Reset
+                        </button>
+                    </div>
+
+                    <div class="session-meta-tray">
+                        <div class="meta-item">
+                            <span class="meta-label">Timer</span>
+                            <span class="meta-val" id="session-timer">00:00</span>
+                        </div>
+                        <div class="meta-item">
+                            <span class="meta-label">FPS</span>
+                            <span class="meta-val" id="stream-fps">00</span>
+                        </div>
+                        <div class="meta-item">
+                            <span class="meta-label">Processed</span>
+                            <span class="meta-val" id="frames-processed">0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- REALTIME METRICS CARD -->
+                <div class="dashboard-card card-metrics glass-card">
+                    <div class="card-header">
+                        <h2>Biometrics Output</h2>
+                    </div>
+
+                    <div class="metrics-container">
+                        <div class="metric-block primary">
+                            <div class="metric-val text-gradient" id="curr-emotion">Neutral</div>
+                            <div class="metric-label">Current Expression</div>
+                        </div>
+
+                        <div class="metric-block secondary">
+                            <div class="metric-val" id="curr-confidence">0.0%</div>
+                            <div class="metric-label">Detection Confidence</div>
+                        </div>
+                    </div>
+
+                    <div class="probabilities-bars" id="probs-container">
+                        <h3>Expression Breakdown</h3>
+                        <!-- Bars dynamically loaded by JavaScript -->
+                        <div class="emotion-bar-item">
+                            <div class="em-name">Happy</div>
+                            <div class="em-track">
+                                <div class="em-fill" style="width: 0%; background: var(--success-color);"></div>
+                            </div>
+                            <div class="em-pct">0%</div>
+                        </div>
+                        <div class="emotion-bar-item">
+                            <div class="em-name">Surprise</div>
+                            <div class="em-track">
+                                <div class="em-fill" style="width: 0%; background: var(--info-color);"></div>
+                            </div>
+                            <div class="em-pct">0%</div>
+                        </div>
+                        <div class="emotion-bar-item">
+                            <div class="em-name">Neutral</div>
+                            <div class="em-track">
+                                <div class="em-fill" style="width: 0%; background: var(--neutral-color);"></div>
+                            </div>
+                            <div class="em-pct">0%</div>
+                        </div>
+                        <div class="emotion-bar-item">
+                            <div class="em-name">Sad</div>
+                            <div class="em-track">
+                                <div class="em-fill" style="width: 0%; background: var(--warning-color);"></div>
+                            </div>
+                            <div class="em-pct">0%</div>
+                        </div>
+                        <div class="emotion-bar-item">
+                            <div class="em-name">Angry</div>
+                            <div class="em-track">
+                                <div class="em-fill" style="width: 0%; background: var(--danger-color);"></div>
+                            </div>
+                            <div class="em-pct">0%</div>
+                        </div>
+                        <div class="emotion-bar-item">
+                            <div class="em-name">Fear</div>
+                            <div class="em-track">
+                                <div class="em-fill" style="width: 0%; background: var(--accent-light);"></div>
+                            </div>
+                            <div class="em-pct">0%</div>
+                        </div>
+                        <div class="emotion-bar-item">
+                            <div class="em-name">Disgust</div>
+                            <div class="em-track">
+                                <div class="em-fill" style="width: 0%; background: var(--accent-dark);"></div>
+                            </div>
+                            <div class="em-pct">0%</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CHARTS PANEL -->
+                <div class="dashboard-card card-charts glass-card full-width">
+                    <div class="card-header">
+                        <h2>Analytics Dashboard</h2>
+                    </div>
+
+                    <div class="charts-wrap">
+                        <div class="chart-container">
+                            <h3>Session Emotion Timeline</h3>
+                            <canvas id="timelineChart"></canvas>
+                        </div>
+                        <div class="chart-container donut">
+                            <h3>Aggregated Expression Makeup</h3>
+                            <canvas id="distributionChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- RECOMMENDATIONS PANEL -->
+                <div class="dashboard-card card-recommendations glass-card full-width" id="panel-coaching" style="display: none;">
+                    <div class="card-header">
+                        <h2>AI Practice Feedback</h2>
+                        <button id="btn-export-pdf" class="btn btn-secondary btn-sm" disabled>
+                            <i class="fa-solid fa-file-pdf"></i> Download PDF
+                        </button>
+                    </div>
+                    
+                    <div class="feedback-layout">
+                        <div class="radar-metrics">
+                            <div class="radar-card pos">
+                                <span class="val" id="stat-pos-pct">0%</span>
+                                <span class="lbl">Positive Expressions</span>
+                            </div>
+                            <div class="radar-card neu">
+                                <span class="val" id="stat-neu-pct">0%</span>
+                                <span class="lbl">Neutral Expressions</span>
+                            </div>
+                            <div class="radar-card neg">
+                                <span class="val" id="stat-neg-pct">0%</span>
+                                <span class="lbl">Negative Expressions</span>
+                            </div>
+                        </div>
+                        <div class="feedback-text-box">
+                            <h3>Evaluated Session Recommendation</h3>
+                            <p id="coaching-advice">Complete your mock practice or stop the session to generate structured advice.</p>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- GLOBAL LOADING MODAL overlay -->
+    <div id="global-spinner" class="loading-overlay" style="display: none;">
+        <div class="spinner-box">
+            <div class="spinner"></div>
+            <p id="spinner-message">Initializing DeepFace models...</p>
+        </div>
+    </div>
+    
+    <!-- Scripts -->
+    <script src="{{ url_for('static', filename='charts.js') }}"></script>
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>

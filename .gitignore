@@ -1,0 +1,27 @@
+# Python Virtual Environment
+.venv/
+venv/
+ENV/
+env/
+Active/
+emotion_env/
+
+# Databases storage
+database/interview_sense.db
+
+# Generated PDF reports
+reports/*.pdf
+
+# Pycache systems
+__pycache__/
+*.py[cod]
+*$py.class
+
+# IDE integrations
+.idea/
+.vscode/
+
+# OpenCV weight downloads and general caching
+.deepface/
+weights/
+*.h5
