@@ -1,4 +1,30 @@
 import os
+import shutil
+
+# Limit TensorFlow thread pool and log verbosity for resource-constrained server instances (e.g. Render Free Tier)
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+os.environ['OMP_NUM_THREADS'] = '1'
+os.environ['TF_NUM_INTRAOP_THREADS'] = '1'
+os.environ['TF_NUM_INTEROP_THREADS'] = '1'
+
+# Set DeepFace Home directory to localized project path
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+os.environ['DEEPFACE_HOME'] = BASE_DIR
+
+# Ensure DeepFace weights directory exists and model weights are ready locally
+weights_dir = os.path.join(BASE_DIR, '.deepface', 'weights')
+os.makedirs(weights_dir, exist_ok=True)
+src_weight = os.path.join(BASE_DIR, 'models', 'facial_expression_model_weights.h5')
+dst_weight = os.path.join(weights_dir, 'facial_expression_model_weights.h5')
+
+if os.path.exists(src_weight) and not os.path.exists(dst_weight):
+    try:
+        shutil.copy(src_weight, dst_weight)
+        print("Model weights successfully prepared in .deepface/weights")
+    except Exception as e:
+        print(f"Error copying weights: {e}")
+
+
 import uuid
 import base64
 import numpy as np
@@ -309,5 +335,6 @@ def delete_saved_session(session_id):
         }), 500
 
 if __name__ == '__main__':
-    # Threaded mode allows multiple frame requests to run fine
-    app.run(host='127.0.0.1', port=5000, debug=True)
+    # Bind to 0.0.0.0 and port environment variable for web cloud hosting compatibility (e.g. Render)
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port, debug=True)

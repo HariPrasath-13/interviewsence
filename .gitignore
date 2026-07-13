@@ -25,3 +25,5 @@ __pycache__/
 .deepface/
 weights/
 *.h5
+!models/facial_expression_model_weights.h5
+

@@ -1,3 +1,11 @@
+import os
+
+# Limit TensorFlow resource usage inside DeepFace module imports
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+os.environ['OMP_NUM_THREADS'] = '1'
+os.environ['TF_NUM_INTRAOP_THREADS'] = '1'
+os.environ['TF_NUM_INTEROP_THREADS'] = '1'
+
 import cv2
 import base64
 import numpy as np
