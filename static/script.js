@@ -326,11 +326,6 @@ function setFaceIndicatorState(detected) {
 function updateProbabilitySliders(probabilities) {
     for (const [em, rawVal] of Object.entries(probabilities)) {
         const lowerEm = em.toLowerCase();
-        // Seek element inside container
-        const fillBar = document.querySelector(`.emotion-bar-item:has(.em-name:contains-ci('${lowerEm}')) .em-fill`);
-        const pctLabel = document.querySelector(`.emotion-bar-item:has(.em-name:contains-ci('${lowerEm}')) .em-pct`);
-        
-        // Fallback standard selection query if custom contains-ci query isn't supported natively
         const items = document.querySelectorAll('.emotion-bar-item');
         items.forEach(el => {
             const labelNode = el.querySelector('.em-name');
@@ -415,6 +410,9 @@ function renderFinalAnalytics(analytics) {
     btnStop.disabled = true;
     btnReset.disabled = true;
     
+    // Store last session ID for PDF report downloading
+    btnPdf.setAttribute('data-last-id', activeSessionId);
+    
     // Also save state inactive locally
     activeSessionId = null;
 }
@@ -435,15 +433,6 @@ function downloadSessionPdf() {
     }
     
     window.location.href = `/download_report?session_id=${targetSessionId}`;
-}
-
-// Stop function update to assign attributes
-const originalStopRenderer = renderFinalAnalytics;
-renderFinalAnalytics = function(analytics) {
-    btnPdf.setAttribute('data-last-id', analytics.session_id || analytics.session_id || "TEMP");
-    // Wait, the API stop returns session_id, so we just set it!
-    btnPdf.setAttribute('data-last-id', activeSessionId);
-    originalStopRenderer(analytics);
 }
 
 // 6. Reset all local state
